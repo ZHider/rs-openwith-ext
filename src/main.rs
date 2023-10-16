@@ -10,6 +10,21 @@ macro_rules! op_default {
     };
 }
 
+macro_rules! debug {
+    ($($e:expr),+) => {
+        {
+            #[cfg(debug_assertions)]
+            {
+                dbg!($($e),+)
+            }
+            #[cfg(not(debug_assertions))]
+            {
+                ($($e),+)
+            }
+        }
+    };
+}
+
 
 fn main() {
     // 没有配置文件则直接退出
@@ -28,7 +43,7 @@ fn main() {
         match config.store.get(&ext.to_string()) {
             Some(el) => {
                 let command = el.command.replace("{}", &filename);
-                println!("{}> {}", op_default!(&el.name, ""), command);
+                println!("{} > {}", op_default!(&el.name, ""), command);
                 let _ = spawn_command(&command).expect("Failed to start command");
             },
             _ => println!(
@@ -49,7 +64,7 @@ fn spawn_command(command: &str) -> Result<std::process::Child, std::io::Error> {
 }
 
 fn collect_args() -> VecDeque<String> {
-    dbg!(env::args().collect())
+    debug!(env::args().collect())
 }
 
 fn filter_existing_files(mut args: VecDeque<String>) -> Option<Vec<PathBuf>> {
@@ -65,18 +80,17 @@ fn filter_existing_files(mut args: VecDeque<String>) -> Option<Vec<PathBuf>> {
     
     match files.len() {
         0 => None,
-        _ => Some(dbg!(files))
+        _ => Some(debug!(files))
     }
 }
 
 fn is_config_file_exists() -> bool {
     let pass = std::path::Path::new(ConfigAdaptor::SAVED_FILE_PATH).exists();
     if !pass {
-        print!("No config file found, created a demo at {}.\nPress Enter to exit.", ConfigAdaptor::SAVED_FILE_PATH);
+        println!("No config file found, created a demo at {}.", ConfigAdaptor::SAVED_FILE_PATH);
         ConfigAdaptor::new_demo().save().expect(&format!("Cannot save demo {}", ConfigAdaptor::SAVED_FILE_PATH));
-        let _ = std::io::stdin().read_line(&mut String::new());
     }
-    
+
     pass
 }
 
@@ -93,7 +107,6 @@ pub mod config_manager {
     /// 尽管store设置为pub不是很安全，但为了方便使用仍允许直接访问
     #[derive(Serialize, Deserialize, Debug)]
     pub struct ConfigAdaptor {
-        pub trim_quotes: bool,
         pub store: HashMap<String, ConfigElement>
     }
 
@@ -113,7 +126,7 @@ pub mod config_manager {
         /// 新建一个空 ConfigAdaptor 实例。
         /// ConfigAdaptor.store 为 pub，可以直接访问修改，但不保证程序能够正常运行。
         pub fn new() -> ConfigAdaptor {
-            ConfigAdaptor { store: HashMap::new(), trim_quotes: false }
+            ConfigAdaptor { store: HashMap::new() }
         }
         pub fn new_demo() -> ConfigAdaptor {
             let mut demo = Self::new();
@@ -123,7 +136,7 @@ pub mod config_manager {
             );
             demo.store.insert(
                 "ps1".to_string(), 
-                ConfigElement { name: Some("Run Powershell Script".to_string()), command: "powershell {}".to_string() }
+                ConfigElement { name: Some("Run Powershell Script".to_string()), command: "powershell -File {}".to_string() }
             );
             
             demo
@@ -147,7 +160,6 @@ pub mod config_manager {
         /// 剩余行为等同于 Self.from_file()。
         pub fn load(self) -> Result<ConfigAdaptor, AnyError> {
             // 传进self但不使用，self会直接被drop掉
-            dbg!("Going to drop self...");
             Ok(Self::from_file()?)
         }
 
