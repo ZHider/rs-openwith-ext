@@ -3,6 +3,9 @@ name = "rs-openwith-ext"
 version = "0.1.1"
 edition = "2021"
 
+authors = ["littlehider@gmail.com"]
+readme = "README.md"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [profile.release]
